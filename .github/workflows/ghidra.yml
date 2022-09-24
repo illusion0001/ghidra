@@ -1,0 +1,106 @@
+name: Build distributions and container images
+
+on: [ push, pull_request, workflow_dispatch ]
+
+# https://github.com/garyttierney/ghidra-batteries-included/blob/fcf6e9fb0a4767065fa6f2a51c26ba379df37509/.github/workflows/main.yml
+
+jobs:
+  build_ghidra:
+    strategy:
+      fail-fast: false
+      matrix:
+      # os: [ windows-latest, ubuntu-latest ]
+        os: [ windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle', '**/settings.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      - name: Cache Ghidra dependencies
+        uses: actions/cache@v3
+        with:
+          path: dependencies
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/fetchDependencies.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      - name: Set parameters
+        id: params
+        run: |
+          echo "::set-output name=build-root-directory::"
+          echo "::set-output name=gradle-version::7.3"
+          echo "::set-output name=jdk-version::17"
+          echo "::set-output name=GRADLE_OPTS::-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.daemon=false"
+
+      - name: Install JDK ${{ steps.params.outputs.jdk-version }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: adopt
+          java-version: ${{ steps.params.outputs.jdk-version }}
+
+      - name: Download Ghidra dependency repository
+        uses: eskatos/gradle-command-action@v1
+        with:
+          build-root-directory: ${{ steps.params.outputs.build-root-directory }}
+          arguments: --init-script gradle/support/fetchDependencies.gradle init --quiet
+          gradle-version: ${{ steps.params.outputs.gradle-version }}
+        env:
+          GRADLE_OPTS: ${{ steps.params.outputs.GRADLE_OPTS }}
+
+      - name: Build Ghidra
+        uses: eskatos/gradle-command-action@v1
+        with:
+          build-root-directory: ${{ steps.params.outputs.build-root-directory }}
+          arguments: buildGhidra
+          gradle-version: ${{ steps.params.outputs.gradle-version }}
+        env:
+          GRADLE_OPTS: ${{ steps.params.outputs.GRADLE_OPTS }}
+
+      - name: Upload distribution artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ghidra-distribution-${{ runner.os }}
+          path: build/dist/*.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  publish_ghidra:
+    needs: build_ghidra
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Detect version of Ghidra
+        id: ghidra_version
+        run: |
+          while IFS='=' read -r var value; do
+            normalized_var=$(sed 's/\./_/g' <<< "$var")
+            declare "$normalized_var=$value"
+          done < Ghidra/application.properties
+          echo "::set-output name=release_name::$application_name ${application_version}-${application_release_name} ($(date -u -I)) JDK ${application_java_compiler}"
+          echo "::set-output name=release_tag::${application_version}_${application_release_name}_$(date -u +%s)"
+          echo "::set-output name=ghidra_ver::${application_version}_${application_release_name}"
+          echo "::set-output name=jdk_ver::${application_java_compiler}_${application_java_compiler}"
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir dest
+          mv ghidra-distribution-Windows/* dest || true
+          mv ghidra-distribution-Linux/* dest || true
+          gh release create ${{ steps.ghidra_version.outputs.release_tag }} dest/*.zip --target ${{ GITHUB.SHA }} -t "${{ steps.ghidra_version.outputs.release_name }}" --notes "Automated release management from GitHub Actions"
