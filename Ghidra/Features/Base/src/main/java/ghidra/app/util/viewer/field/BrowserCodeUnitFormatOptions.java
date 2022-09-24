@@ -116,9 +116,9 @@ public class BrowserCodeUnitFormatOptions extends CodeUnitFormatOptions
 
 			fieldOptions.registerOption(GhidraOptions.SHOW_BLOCK_NAME_OPTION, false, hl,
 				"Prepends memory block names to labels in the operands field.");
-			fieldOptions.registerOption(REGISTER_VARIABLE_MARKUP_OPTION, true, hl,
+			fieldOptions.registerOption(REGISTER_VARIABLE_MARKUP_OPTION, false, hl,
 				"Markup function register variable references");
-			fieldOptions.registerOption(STACK_VARIABLE_MARKUP_OPTION, true, hl,
+			fieldOptions.registerOption(STACK_VARIABLE_MARKUP_OPTION, false, hl,
 				"Markup function stack variable references");
 			fieldOptions.registerOption(INFERRED_VARIABLE_MARKUP_OPTION, true, hl,
 				"Include INFERRED variable references in markup");
@@ -196,8 +196,8 @@ public class BrowserCodeUnitFormatOptions extends CodeUnitFormatOptions
 		}
 		showLibraryInNamespace = namespaceOption.isShowLibraryInNamespace();
 
-		doRegVariableMarkup = fieldOptions.getBoolean(REGISTER_VARIABLE_MARKUP_OPTION, true);
-		doStackVariableMarkup = fieldOptions.getBoolean(STACK_VARIABLE_MARKUP_OPTION, true);
+		doRegVariableMarkup = fieldOptions.getBoolean(REGISTER_VARIABLE_MARKUP_OPTION, false);
+		doStackVariableMarkup = fieldOptions.getBoolean(STACK_VARIABLE_MARKUP_OPTION, false);
 		includeInferredVariableMarkup =
 			fieldOptions.getBoolean(INFERRED_VARIABLE_MARKUP_OPTION, true);
 		alwaysShowPrimaryReference =
