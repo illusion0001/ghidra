@@ -1,0 +1,110 @@
+name: Build distributions and container images
+
+on: [ push, pull_request, workflow_dispatch ]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name  }}
+  cancel-in-progress: true
+
+# https://github.com/garyttierney/ghidra-batteries-included/blob/fcf6e9fb0a4767065fa6f2a51c26ba379df37509/.github/workflows/main.yml
+
+jobs:
+  build_ghidra:
+    strategy:
+      fail-fast: false
+      matrix:
+      # os: [ windows-latest, ubuntu-latest ]
+        os: [ windows-latest ]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle', '**/settings.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      - name: Cache Ghidra dependencies
+        uses: actions/cache@v3
+        with:
+          path: dependencies
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/fetchDependencies.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle
+
+      - name: Set parameters
+        shell: bash
+        run: |
+          echo "build-root-directory=./" >> $GITHUB_ENV
+          echo "gradle-version=7.3" >> $GITHUB_ENV
+          echo "jdk-version=17" >> $GITHUB_ENV
+          echo "GRADLE_OPTS=-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.daemon=false" >> $GITHUB_ENV
+
+      - name: Install JDK ${{ env.jdk-version }}
+        uses: actions/setup-java@v3
+        with:
+          distribution: adopt
+          java-version: ${{ env.jdk-version }}
+
+      - name: Download Ghidra dependency repository
+        uses: eskatos/gradle-command-action@v1
+        with:
+          build-root-directory: ${{ env.build-root-directory }}
+          arguments: -I gradle/support/fetchDependencies.gradle init
+          gradle-version: ${{ env.gradle-version }}
+        env:
+          GRADLE_OPTS: ${{ env.GRADLE_OPTS }}
+
+      - name: Build Ghidra
+        uses: eskatos/gradle-command-action@v1
+        with:
+          build-root-directory: ${{ env.build-root-directory }}
+          arguments: buildGhidra
+          gradle-version: ${{ env.gradle-version }}
+        env:
+          GRADLE_OPTS: ${{ env.GRADLE_OPTS }}
+
+      - name: Upload distribution artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ghidra-distribution-${{ runner.os }}
+          path: build/dist/*.zip
+          if-no-files-found: error
+          retention-days: 1
+
+  publish_ghidra:
+    needs: build_ghidra
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Detect version of Ghidra
+        id: ghidra_version
+        run: |
+          while IFS='=' read -r var value; do
+            normalized_var=$(sed 's/\./_/g' <<< "$var")
+            declare "$normalized_var=$value"
+          done < Ghidra/application.properties
+          echo "release_name=$application_name ${application_version}-${application_release_name} ($(date -u -I)) JDK ${application_java_compiler}" >> $GITHUB_ENV
+          echo "release_tag=${application_version}_${application_release_name}_$(date -u +%s)" >> $GITHUB_ENV
+          echo "ghidra_ver=${application_version}_${application_release_name}" >> $GITHUB_ENV
+          echo "jdk_ver=${application_java_compiler}_${application_java_compiler}" >> $GITHUB_ENV
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+
+      - name: Create release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir dest
+          mv ghidra-distribution-Windows/* dest || true
+          mv ghidra-distribution-Linux/* dest || true
+          gh release create ${{ env.release_tag }} dest/*.zip --target ${{ GITHUB.SHA }} -t "${{ env.release_name }}" --notes "Automated release management from GitHub Actions"
