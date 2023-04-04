@@ -2,6 +2,10 @@ name: Build distributions and container images
 
 on: [ push, pull_request, workflow_dispatch ]
 
+concurrency:
+  group: ${{ github.ref }}-${{ github.event_name  }}
+  cancel-in-progress: true
+
 # https://github.com/garyttierney/ghidra-batteries-included/blob/fcf6e9fb0a4767065fa6f2a51c26ba379df37509/.github/workflows/main.yml
 
 jobs:
