@@ -2785,9 +2785,9 @@ enterFrames: low5 is low5 { tmp:1 = low5; export tmp; }
 :INSD^rep^reptail eseDI4,DX is vexMode=0 & rep & reptail & opsize=1 & byte=0x6d & eseDI4 & DX   { build rep; build eseDI4; eseDI4 = in(DX); build reptail; }
 :INSD^rep^reptail eseDI4,DX is vexMode=0 & rep & reptail & opsize=2 & byte=0x6d & eseDI4 & DX   { build rep; build eseDI4; eseDI4 = in(DX); build reptail; }
 
-:INT1           is vexMode=0 & byte=0xf1                            { tmp:1 = 0x1; intloc:$(SIZE) = swi(tmp); call [intloc]; return [0:1]; }
-:INT3           is vexMode=0 & byte=0xcc                            { tmp:1 = 0x3; intloc:$(SIZE) = swi(tmp); call [intloc]; return [0:1]; }
-:INT imm8       is vexMode=0 & byte=0xcd; imm8                      { tmp:1 = imm8; intloc:$(SIZE) = swi(tmp); call [intloc]; }
+:INT1           is vexMode=0 & byte=0xf1                            { }
+:INT3           is vexMode=0 & byte=0xcc                            { }
+:INT imm8       is vexMode=0 & byte=0xcd; imm8                      { }
 :INTO           is vexMode=0 & byte=0xce & bit64=0
 {
   tmp:1 = 0x4;
@@ -3847,7 +3847,7 @@ define pcodeop skinit;
 define pcodeop invalidInstructionException;
 :UD0  Reg32, rm32 is vexMode=0 & byte=0x0f; byte=0xff; rm32 & Reg32 ...           { invalidInstructionException(); goto inst_start; }
 :UD1  Reg32, rm32 is vexMode=0 & byte=0x0f; byte=0xb9; rm32 & Reg32 ...           { invalidInstructionException(); goto inst_start; }
-:UD2              is vexMode=0 & byte=0xf; byte=0xb                               { invalidInstructionException(); goto inst_start; }
+:UD2              is vexMode=0 & byte=0xf; byte=0xb                               { invalidInstructionException(); }
 
 :VERR rm16      is vexMode=0 & byte=0xf; byte=0x0; rm16 & reg_opcode=4 ...      { }
 :VERW rm16      is vexMode=0 & byte=0xf; byte=0x0; rm16 & reg_opcode=5 ...      { }
