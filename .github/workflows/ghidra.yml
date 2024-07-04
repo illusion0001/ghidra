@@ -41,7 +41,7 @@ jobs:
         shell: bash
         run: |
           echo "build-root-directory=./" >> $GITHUB_ENV
-          echo "gradle-version=7.3" >> $GITHUB_ENV
+          echo "gradle-version=8">> $GITHUB_ENV
           echo "jdk-version=17" >> $GITHUB_ENV
           echo "GRADLE_OPTS=-Dorg.gradle.parallel=true -Dorg.gradle.caching=true -Dorg.gradle.daemon=false" >> $GITHUB_ENV
 
@@ -52,7 +52,7 @@ jobs:
           java-version: ${{ env.jdk-version }}
 
       - name: Download Ghidra dependency repository
-        uses: eskatos/gradle-command-action@v1
+        uses: gradle/gradle-build-action@v3
         with:
           build-root-directory: ${{ env.build-root-directory }}
           arguments: -I gradle/support/fetchDependencies.gradle init
