@@ -56,7 +56,7 @@ jobs:
         with:
           build-root-directory: ${{ env.build-root-directory }}
           arguments: -I gradle/support/fetchDependencies.gradle init
-          gradle-version: ${{ env.gradle-version }}
+          #gradle-version: ${{ env.gradle-version }}
         env:
           GRADLE_OPTS: ${{ env.GRADLE_OPTS }}
 
