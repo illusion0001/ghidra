@@ -324,8 +324,8 @@ public class FindNoReturnFunctionsAnalyzer extends AbstractAnalyzer {
 	}
 
 	private boolean detectNoReturn(Program cp, AddressSet noReturnSet, AddressSetView checkSet)
-			throws CancelledException {
-
+	/* throws CancelledException */{
+		/*
 		AddressSet checkedSet = new AddressSet();
 
 		boolean hadSuspiciousFunctions = false;
@@ -407,11 +407,13 @@ public class FindNoReturnFunctionsAnalyzer extends AbstractAnalyzer {
 			}
 		}
 		return hadSuspiciousFunctions;
+		*/
+		return false;
 	}
 
 	private boolean targetOnlyCallsNoReturn(Program cp, Address target, AddressSet noReturnSet)
-			throws CancelledException {
-
+			/* throws CancelledException */ {
+		/*
 		SimpleBlockModel model = new SimpleBlockModel(cp);
 
 		// follow the flow of the instructions
@@ -486,6 +488,8 @@ public class FindNoReturnFunctionsAnalyzer extends AbstractAnalyzer {
 		}
 
 		return hitNoReturn;
+		*/
+		return false;
 	}
 
 	/**
